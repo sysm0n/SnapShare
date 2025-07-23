@@ -11,10 +11,11 @@ import tempfile
 # Configuration
 EVENT_NAME = os.getenv("EVENT_NAME", "my_event")
 S3_ENDPOINT = os.getenv("S3_ENDPOINT", "127.0.0.1:9000")
-S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "test123321321")
-S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "test123fwsedafds")
-S3_BUCKET = os.getenv("S3_BUCKET", "event1")
-SHOW_ONLY_OWN_PHOTOS = os.getenv("SHOW_ONLY_OWN_PHOTOS", "true").lower() == "true"
+S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "ROOTNAME")
+S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "CHANGEME123")
+S3_BUCKET = os.getenv("S3_BUCKET", "event")
+SHOW_ONLY_OWN_PHOTOS = os.getenv("SHOW_ONLY_OWN_PHOTOS", "false").lower() == "true"
+USE_BACKGROUND = os.getenv("USE_BACKGROUND", "true").lower() == "true"
 
 # FastAPI app setup
 app = FastAPI()
@@ -25,6 +26,17 @@ app.add_middleware(
     allow_headers=["*"]
 )
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+
+# Serve background.svg from root if it exists
+import pathlib
+@app.api_route("/background.svg", methods=["GET", "HEAD"])
+def background_svg():
+    if not USE_BACKGROUND:
+        return HTMLResponse(status_code=404, content="Not Found")
+    svg_path = pathlib.Path("background.svg")
+    if svg_path.exists():
+        return FileResponse(str(svg_path), media_type="image/svg+xml")
+    return HTMLResponse(status_code=404, content="Not Found")
 
 # S3/MinIO client
 s3 = boto3.client(
@@ -89,4 +101,8 @@ def upload_photo(user: str = Form(...), file: UploadFile = Form(...)):
 @app.get("/config")
 def get_config():
     """Return event configuration for frontend."""
-    return {"event_name": EVENT_NAME, "show_only_own_photos": SHOW_ONLY_OWN_PHOTOS}
+    return {
+        "event_name": EVENT_NAME,
+        "show_only_own_photos": SHOW_ONLY_OWN_PHOTOS,
+        "use_background": USE_BACKGROUND
+    }

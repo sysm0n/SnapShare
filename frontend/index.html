@@ -5,26 +5,96 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Event Photo Sharing</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+      body {
+        background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%);
+        min-height: 100vh;
+        margin: 0;
+        font-family: 'Segoe UI', Arial, sans-serif;
+      }
+      body.svg-bg {
+        background: url('background.svg') center center/cover no-repeat, linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%);
+      }
+      .glass {
+        background: rgba(255,255,255,0.45);
+        border-radius: 24px;
+        box-shadow: 0 8px 32px rgba(60,60,120,0.18);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        padding: 2.5em 2em 2em 2em;
+        max-width: 440px;
+        margin: 3em auto;
+        text-align: center;
+      }
+      .glass h1 {
+        font-size: 2.3em;
+        color: #6366f1;
+        margin-bottom: 0.7em;
+        letter-spacing: 1px;
+      }
+      .glass button {
+        background: linear-gradient(90deg, #6366f1 0%, #818cf8 100%);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 0.9em 2em;
+        font-size: 1.1em;
+        font-weight: 500;
+        cursor: pointer;
+        margin: 0.7em 0.4em;
+        box-shadow: 0 2px 8px rgba(60,60,120,0.10);
+        transition: background 0.2s, transform 0.2s;
+      }
+      .glass button:hover, .glass button:active {
+        background: linear-gradient(90deg, #818cf8 0%, #6366f1 100%);
+        transform: scale(1.04);
+      }
+      .glass input[type="text"] {
+        width: 85%;
+        padding: 0.8em;
+        border-radius: 10px;
+        border: 1px solid #c7d2fe;
+        margin-bottom: 1.2em;
+        font-size: 1.1em;
+        background: rgba(255,255,255,0.85);
+      }
+      #gallery {
+        margin-top: 2em;
+      }
+      @media (max-width: 600px) {
+        .glass {
+          background: rgba(255,255,255,0.25);
+          backdrop-filter: blur(3px);
+          -webkit-backdrop-filter: blur(3px);
+          padding: 1.2em 0.5em 1.5em 0.5em;
+          max-width: 98vw;
+          margin: 1.2em auto;
+        }
+        .glass h1 {
+          font-size: 1.5em;
+        }
+      }
+    </style>
 </head>
 <body>
-    <div id="name-modal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(60,60,120,0.15);display:flex;align-items:center;justify-content:center;z-index:1000;">
-        <div style="background:#fff;padding:2em 2.5em;border-radius:18px;box-shadow:0 8px 32px rgba(60,60,120,0.15);text-align:center;">
-            <h2>Enter your name</h2>
-            <input type="text" id="modal-user" placeholder="Your name..." style="width:80%;padding:0.7em;border-radius:8px;border:1px solid #c7d2fe;font-size:1em;">
+    <div id="name-modal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(60,60,120,0.10);display:flex;align-items:center;justify-content:center;z-index:1000;">
+        <div class="glass">
+            <h2 style="font-size:1.5em;color:#6366f1;margin-bottom:1em;">Enter your name</h2>
+            <input type="text" id="modal-user" placeholder="Your name...">
             <br><br>
-            <button onclick="saveName()" style="padding:0.7em 1.5em;border-radius:8px;background:#6366f1;color:#fff;font-size:1em;font-weight:500;border:none;">Continue</button>
+            <button onclick="saveName()">Continue</button>
         </div>
     </div>
-    <div class="container">
+    <div class="glass">
         <h1 id="event-title"></h1>
         <input type="file" id="file" accept="image/*" capture="environment" style="display:none">
-        <div style="margin-bottom:1em;">
+        <div style="margin-bottom:1.2em;">
             <button onclick="document.getElementById('file').click()">Take Photo</button>
             <button onclick="document.getElementById('manual-file').click()">Upload from Gallery</button>
             <input type="file" id="manual-file" accept="image/*" multiple style="display:none">
         </div>
         <div id="message"></div>
-        <div id="gallery" style="margin-top:2em;"></div>
+        <div id="gallery"></div>
         <input type="hidden" id="user">
     </div>
     <script>
@@ -66,6 +136,18 @@
                 });
         }
         window.onload = function() {
+            // Check if SVG exists
+            fetch('background.svg', { method: 'HEAD' })
+              .then(res => {
+                if (res.ok) {
+                  document.body.classList.add('svg-bg');
+                } else {
+                  document.body.classList.remove('svg-bg');
+                }
+              })
+              .catch(() => {
+                document.body.classList.remove('svg-bg');
+              });
             let savedName = getCookie('event_user');
             fetch('/config')
                 .then(res => res.json())
@@ -149,7 +231,7 @@
                     let html = '<h2>Event Gallery</h2><div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;">';
                     data.forEach(photo => {
                         html += `<div style="text-align:center;max-width:160px;">
-                            <img src="${photo.url}" alt="${photo.filename}" style="width:140px;height:140px;object-fit:cover;border-radius:8px;box-shadow:0 2px 8px rgba(60,60,120,0.10);">
+                            <img src="${photo.url}" alt="${photo.filename}" style="width:140px;height:140px;object-fit:cover;border-radius:8px;box-shadow:0 2px 8px rgba(60,60,120,0.10);cursor:pointer;" onclick="openImageModal('${photo.url}','${photo.user}')">
                             <div style="margin-top:0.5em;font-size:0.95em;color:#6366f1;font-weight:500;">${photo.user}</div>
                         </div>`;
                     });
@@ -157,6 +239,26 @@
                     gallery.innerHTML = html;
                 });
         }
+    // Image modal logic
+    function openImageModal(url, user) {
+        let modal = document.getElementById('img-modal');
+        let modalImg = document.getElementById('img-modal-img');
+        let modalUser = document.getElementById('img-modal-user');
+        modalImg.src = url;
+        modalUser.textContent = user;
+        modal.style.display = 'flex';
+    }
+    function closeImageModal(e) {
+        if (e.target.id === 'img-modal' || e.target.id === 'img-modal-close') {
+            document.getElementById('img-modal').style.display = 'none';
+        }
+    }
     </script>
+    <!-- Image Modal -->
+    <div id="img-modal" onclick="closeImageModal(event)" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(60,60,120,0.18);z-index:2000;align-items:center;justify-content:center;flex-direction:column;">
+      <span id="img-modal-close" style="position:absolute;top:18px;right:22px;font-size:2.2em;color:#6366f1;cursor:pointer;font-weight:700;">&times;</span>
+      <img id="img-modal-img" src="" alt="Photo" style="max-width:92vw;max-height:70vh;border-radius:18px;box-shadow:0 8px 32px rgba(60,60,120,0.18);background:#fff;">
+      <div id="img-modal-user" style="margin-top:1em;font-size:1.2em;color:#6366f1;font-weight:500;"></div>
+    </div>
 </body>
 </html>

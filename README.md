@@ -12,6 +12,8 @@ A modern FastAPI web application for event photo sharing with S3/MinIO cloud sto
 - S3/MinIO integration for cloud storage
 - Privacy option: show only own photos or all
 - Mobile-friendly, clean UI
+- Tap any gallery image to view it larger in a modal (mobile & desktop)
+- Optional custom SVG background (add background.svg to project root)
 - Dockerized deployment
 
 ## Quick Start
@@ -47,6 +49,8 @@ MinIO Console: [http://localhost:9001](http://localhost:9001)
 - Open the app in your browser
 - Enter your name to start uploading and viewing photos
 - Use the camera or gallery upload buttons
+- Tap any photo in the gallery to view it larger; close the modal by tapping outside or the close button
+- If background.svg is present and enabled, the app displays it as a stylish background
 - Gallery updates in real time
 - If privacy is enabled, you only see your own photos
 
@@ -54,6 +58,7 @@ MinIO Console: [http://localhost:9001](http://localhost:9001)
 - Change event name and privacy in `docker-compose.yml`
 - Use your own S3/MinIO credentials
 - Style the UI in `frontend/style.css`
+- To use a custom SVG background, place your `background.svg` in the project root and set `USE_BACKGROUND=true` in `docker-compose.yml`
 
 ## License
 MIT

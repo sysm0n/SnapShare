@@ -1,19 +1,21 @@
 version: '3.8'
 services:
   app:
-    image: image
+    image: sysm0n/snapshare:latest
     ports:
       - "8000:8000"
     environment:
-      - EVENT_NAME=EVENT_NAME
+      - EVENT_NAME=Event Name
       - S3_ENDPOINT=minio:9000
       - S3_ACCESS_KEY=ROOTNAME
       - S3_SECRET_KEY=CHANGEME123
       - S3_BUCKET=event1
       - SHOW_ONLY_OWN_PHOTOS=false
+      - USE_BACKGROUND=true
     depends_on:
       - minio
-
+    volumes:
+      - ./background.svg:/app/background.svg
 
   minio:
     image: quay.io/minio/minio
