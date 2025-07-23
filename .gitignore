@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Docker
+minio_data/
+*.log
+
+# Node
+node_modules/
+
+# Frontend build
+frontend/dist/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# System
+Thumbs.db
+
+# Other
+*.sqlite3
+*.db
+*.bak
+*.swp

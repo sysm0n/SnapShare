@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Photo Sharing</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="name-modal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(60,60,120,0.15);display:flex;align-items:center;justify-content:center;z-index:1000;">
+        <div style="background:#fff;padding:2em 2.5em;border-radius:18px;box-shadow:0 8px 32px rgba(60,60,120,0.15);text-align:center;">
+            <h2>Enter your name</h2>
+            <input type="text" id="modal-user" placeholder="Your name..." style="width:80%;padding:0.7em;border-radius:8px;border:1px solid #c7d2fe;font-size:1em;">
+            <br><br>
+            <button onclick="saveName()" style="padding:0.7em 1.5em;border-radius:8px;background:#6366f1;color:#fff;font-size:1em;font-weight:500;border:none;">Continue</button>
+        </div>
+    </div>
+    <div class="container">
+        <h1 id="event-title"></h1>
+        <input type="file" id="file" accept="image/*" capture="environment" style="display:none">
+        <div style="margin-bottom:1em;">
+            <button onclick="document.getElementById('file').click()">Take Photo</button>
+            <button onclick="document.getElementById('manual-file').click()">Upload from Gallery</button>
+            <input type="file" id="manual-file" accept="image/*" multiple style="display:none">
+        </div>
+        <div id="message"></div>
+        <div id="gallery" style="margin-top:2em;"></div>
+        <input type="hidden" id="user">
+    </div>
+    <script>
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                let date = new Date();
+                date.setTime(date.getTime() + (days*24*60*60*1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+        }
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let ca = document.cookie.split(';');
+            for(let i=0;i < ca.length;i++) {
+                let c = ca[i];
+                while (c.charAt(0)==' ') c = c.substring(1,c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+            }
+            return null;
+        }
+        function saveName() {
+            let name = document.getElementById('modal-user').value.trim();
+            if (!name) return;
+            setCookie('event_user', name, 365);
+            document.getElementById('name-modal').style.display = 'none';
+            document.getElementById('user').value = name;
+            fetch('/config')
+                .then(res => res.json())
+                .then(cfg => {
+                    document.getElementById('event-title').textContent = cfg.event_name;
+                    if (cfg.show_only_own_photos) {
+                        document.getElementById('gallery').style.display = '';
+                        loadGallery();
+                    } else {
+                        loadGallery();
+                    }
+                });
+        }
+        window.onload = function() {
+            let savedName = getCookie('event_user');
+            fetch('/config')
+                .then(res => res.json())
+                .then(cfg => {
+                    document.getElementById('event-title').textContent = cfg.event_name;
+                    if (cfg.show_only_own_photos) {
+                        if (savedName) {
+                            document.getElementById('name-modal').style.display = 'none';
+                            document.getElementById('user').value = savedName;
+                            document.getElementById('gallery').style.display = '';
+                            loadGallery();
+                        } else {
+                            document.getElementById('name-modal').style.display = 'flex';
+                            document.getElementById('gallery').style.display = 'none';
+                        }
+                    } else {
+                        if (savedName) {
+                            document.getElementById('name-modal').style.display = 'none';
+                            document.getElementById('user').value = savedName;
+                        } else {
+                            document.getElementById('name-modal').style.display = 'flex';
+                        }
+                        document.getElementById('gallery').style.display = '';
+                        loadGallery();
+                    }
+                });
+        };
+        document.getElementById('file').addEventListener('change', function() {
+            let fileInput = document.getElementById('file');
+            let user = document.getElementById('user').value;
+            if (!user) { showMessage('Please enter your name.', true); fileInput.value = ''; return; }
+            if (fileInput.files.length > 0) {
+                let formData = new FormData();
+                formData.append('user', user);
+                formData.append('file', fileInput.files[0]);
+                fetch('/upload', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => { showMessage('Photo uploaded!', false); fileInput.value = ''; loadGallery(); })
+                    .catch(() => showMessage('Upload failed.', true));
+            }
+        });
+        document.getElementById('manual-file').addEventListener('change', function() {
+            let fileInput = document.getElementById('manual-file');
+            let user = document.getElementById('user').value;
+            if (!user) { showMessage('Please enter your name.', true); fileInput.value = ''; return; }
+            if (fileInput.files.length > 0) {
+                let uploads = [];
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    let formData = new FormData();
+                    formData.append('user', user);
+                    formData.append('file', fileInput.files[i]);
+                    uploads.push(
+                        fetch('/upload', { method: 'POST', body: formData })
+                            .then(res => res.json())
+                            .then(data => { showMessage('Photo uploaded!', false); })
+                            .catch(() => showMessage('Upload failed.', true))
+                    );
+                }
+                Promise.all(uploads).then(() => { fileInput.value = ''; loadGallery(); });
+            }
+        });
+        function showMessage(msg, isError) {
+            let el = document.getElementById('message');
+            el.textContent = msg;
+            el.className = isError ? 'error' : 'success';
+        }
+        function loadGallery() {
+            let user = document.getElementById('user').value;
+            let url = '/photos';
+            if (user && user.length > 0) {
+                url += '?user=' + encodeURIComponent(user);
+            }
+            fetch(url)
+                .then(res => res.json())
+                .then(function(data) {
+                    let gallery = document.getElementById('gallery');
+                    if (!data.length) {
+                        gallery.innerHTML = '<p>No photos yet.</p>';
+                        return;
+                    }
+                    let html = '<h2>Event Gallery</h2><div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;">';
+                    data.forEach(photo => {
+                        html += `<div style="text-align:center;max-width:160px;">
+                            <img src="${photo.url}" alt="${photo.filename}" style="width:140px;height:140px;object-fit:cover;border-radius:8px;box-shadow:0 2px 8px rgba(60,60,120,0.10);">
+                            <div style="margin-top:0.5em;font-size:0.95em;color:#6366f1;font-weight:500;">${photo.user}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                    gallery.innerHTML = html;
+                });
+        }
+    </script>
+</body>
+</html>
