@@ -49,6 +49,18 @@ s3 = boto3.client(
 @app.get("/photos")
 def list_photos(request: Request):
     """Return all photos, or only the user's own if SHOW_ONLY_OWN_PHOTOS is set."""
+    # Pagination parameters
+    try:
+        page = int(request.query_params.get("page", 1))
+        per_page = int(request.query_params.get("per_page", 10))
+        if page < 1:
+            page = 1
+        if per_page < 1:
+            per_page = 10
+    except Exception:
+        page = 1
+        per_page = 10
+
     user = request.query_params.get("user") if SHOW_ONLY_OWN_PHOTOS else None
     prefix = f"{EVENT_NAME}/"
     response = s3.list_objects_v2(Bucket=S3_BUCKET, Prefix=prefix)
@@ -63,7 +75,17 @@ def list_photos(request: Request):
                     continue
                 url = f"/photo/{quote(key)}"
                 photos.append({"user": photo_user, "filename": filename, "url": url})
-    return JSONResponse(photos)
+
+    total = len(photos)
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_photos = photos[start:end]
+    return JSONResponse({
+        "photos": paginated_photos,
+        "total": total,
+        "page": page,
+        "per_page": per_page
+    })
 
 @app.get("/photo/{key:path}")
 def get_photo(key: str):

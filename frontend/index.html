@@ -216,26 +216,35 @@
         }
         function loadGallery() {
             let user = document.getElementById('user').value;
-            let url = '/photos';
+            let page = window.galleryPage || 1;
+            let per_page = 10;
+            let url = '/photos?page=' + page + '&per_page=' + per_page;
             if (user && user.length > 0) {
-                url += '?user=' + encodeURIComponent(user);
+                url += '&user=' + encodeURIComponent(user);
             }
             fetch(url)
                 .then(res => res.json())
                 .then(function(data) {
                     let gallery = document.getElementById('gallery');
-                    if (!data.length) {
+                    if (!data.photos || data.photos.length === 0) {
                         gallery.innerHTML = '<p>No photos yet.</p>';
                         return;
                     }
                     let html = '<h2>Event Gallery</h2><div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;">';
-                    data.forEach(photo => {
+                    data.photos.forEach(photo => {
                         html += `<div style="text-align:center;max-width:160px;">
                             <img src="${photo.url}" alt="${photo.filename}" style="width:140px;height:140px;object-fit:cover;border-radius:8px;box-shadow:0 2px 8px rgba(60,60,120,0.10);cursor:pointer;" onclick="openImageModal('${photo.url}','${photo.user}')">
                             <div style="margin-top:0.5em;font-size:0.95em;color:#6366f1;font-weight:500;">${photo.user}</div>
                         </div>`;
                     });
                     html += '</div>';
+                    // Pagination controls
+                    let totalPages = Math.ceil(data.total / data.per_page);
+                    html += `<div style='margin-top:1.5em;display:flex;justify-content:center;align-items:center;gap:1em;'>`;
+                    html += `<button onclick='galleryPrevPage()' ${data.page <= 1 ? 'disabled' : ''}>Prev</button>`;
+                    html += `<span style='font-size:1.1em;'>Page ${data.page} of ${totalPages}</span>`;
+                    html += `<button onclick='galleryNextPage(${totalPages})' ${data.page >= totalPages ? 'disabled' : ''}>Next</button>`;
+                    html += `</div>`;
                     gallery.innerHTML = html;
                 });
         }
@@ -251,6 +260,20 @@
     function closeImageModal(e) {
         if (e.target.id === 'img-modal' || e.target.id === 'img-modal-close') {
             document.getElementById('img-modal').style.display = 'none';
+        }
+    }
+    // Pagination helpers
+    window.galleryPage = 1;
+    function galleryPrevPage() {
+        if (window.galleryPage > 1) {
+            window.galleryPage--;
+            loadGallery();
+        }
+    }
+    function galleryNextPage(totalPages) {
+        if (window.galleryPage < totalPages) {
+            window.galleryPage++;
+            loadGallery();
         }
     }
     </script>
